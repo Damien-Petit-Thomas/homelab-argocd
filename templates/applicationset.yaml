@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ .Values.project.name }}
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          {{- range .Values.apps }}
+          - app: {{ .name }}
+            namespace: {{ .namespace }}
+            chartPath: {{ .chartPath }}
+            addonsPath: {{ .addonsPath }}
+            valuesFile: "$values/{{ .valuesFile }}"
+          {{- end }}
+  template:
+    metadata:
+      name: "{{`{{ .app }}`}}"
+    spec:
+      project: {{ .Values.project.name }}
+      sources:
+        - repoURL: {{ .Values.chartsRepoURL }}
+          targetRevision: {{ .Values.chartsRevision }}
+          path: "charts/{{`{{ .chartPath }}`}}"
+          helm:
+            releaseName: "{{`{{ .app }}`}}"
+            valueFiles:
+              - "{{`{{ .valuesFile }}`}}"
+        - repoURL: {{ .Values.overlayRepoURL }}
+          targetRevision: {{ .Values.overlayRevision }}
+          ref: values
+        - repoURL: {{ .Values.overlayRepoURL }}
+          targetRevision: {{ .Values.overlayRevision }}
+          path: "{{`{{ .addonsPath }}`}}"
+          helm:
+            releaseName: "{{`{{ .app }}`}}-addons"
+            valueFiles:
+              - "{{`{{ .valuesFile }}`}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{`{{ .namespace }}`}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
