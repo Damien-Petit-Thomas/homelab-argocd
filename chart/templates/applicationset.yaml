@@ -1,0 +1,57 @@
+{{- $overlay := include "homelab-argocd.overlayRepoURL" . }}
+{{- /*
+The ApplicationSet's own Go templates ({{ .path.basename }}, ...) must reach
+ArgoCD untouched: they are written as Helm string literals, {{`{{ ... }}`}}.
+*/}}
+# One Application per <appsDir>/<name>/app.yaml. Adding a service = adding a
+# directory.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ .Values.applicationSet.name }}
+  namespace: {{ .Values.argocdNamespace }}
+spec:
+  goTemplate: true
+  # A field missing from an app.yaml is an error, not an empty string.
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    # Removing a directory must never delete the service's resources.
+    preserveResourcesOnDeletion: {{ .Values.applicationSet.preserveResourcesOnDeletion }}
+  generators:
+    - git:
+        repoURL: {{ $overlay }}
+        revision: {{ .Values.overlay.revision }}
+        files:
+          - path: "{{ .Values.overlay.appsDir }}/*/app.yaml"
+  # Automated sync is opt-in: a new app starts with autoSync: false, its first
+  # sync is reviewed and triggered by hand, then it is switched to true.
+  templatePatch: |
+    {{`{{- if .autoSync }}`}}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{`{{- end }}`}}
+  template:
+    metadata:
+      name: '{{`{{ .path.basename }}`}}'
+    spec:
+      project: {{ .Values.appsProject.name }}
+      sources:
+        - repoURL: '{{`{{ .chart.repoURL }}`}}'
+          chart: '{{`{{ .chart.name }}`}}'
+          targetRevision: '{{`{{ .chart.version }}`}}'
+          helm:
+            releaseName: '{{`{{ .path.basename }}`}}'
+            valueFiles:
+              - '$overlay/{{`{{ .path.path }}`}}/values.yaml'
+        - repoURL: {{ $overlay }}
+          targetRevision: {{ .Values.overlay.revision }}
+          ref: overlay
+        - repoURL: {{ $overlay }}
+          targetRevision: {{ .Values.overlay.revision }}
+          path: '{{`{{ .path.path }}`}}/addons'
+      destination:
+        server: {{ .Values.destinationServer }}
+        namespace: '{{`{{ .namespace }}`}}'

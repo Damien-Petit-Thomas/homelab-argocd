@@ -1,0 +1,20 @@
+{{- range .Values.repositories }}
+---
+# Repository declaration without credentials (ArgoCD's convention: a labelled
+# Secret).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ required "homelab-argocd: repositories[].secretName is required" .secretName }}
+  namespace: {{ $.Values.argocdNamespace }}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  name: {{ required "homelab-argocd: repositories[].name is required" .name }}
+  type: {{ required "homelab-argocd: repositories[].type is required" .type }}
+  url: {{ required "homelab-argocd: repositories[].url is required" .url }}
+  {{- if .enableOCI }}
+  enableOCI: "true"
+  {{- end }}
+{{- end }}

@@ -1,0 +1,47 @@
+# Example values for the chart in chart/: copy them into your overlay
+# repository and adapt. Every URL and secret store path below is an example.
+
+overlay:
+  repoURL: https://git.example.org/me/homelab-argocd-overlay.git
+  revision: main
+
+bootstrapProject:
+  # The root Application reads the overlay (its values and root.yaml) and
+  # this chart's repository.
+  sourceRepos:
+    - https://git.example.org/me/homelab-argocd-overlay.git
+    - https://github.com/Damien-Petit-Thomas/homelab-argocd.git
+
+appsProject:
+  sourceRepos:
+    - https://git.example.org/me/homelab-argocd-overlay.git
+    - ghcr.io/bjw-s-labs/helm
+  # Platform and bootstrap namespaces: no application may deploy there.
+  deniedNamespaces:
+    - kube-*
+    - argocd
+    - cert-manager
+    - external-secrets
+
+# Public chart repositories (no credentials).
+repositories:
+  - secretName: repo-bjw-s-helm
+    name: bjw-s-helm
+    type: helm
+    url: ghcr.io/bjw-s-labs/helm
+    enableOCI: true
+
+# Credentials for every repository under the URL prefix, copied by the
+# External Secrets Operator from your secret store.
+repoCreds:
+  - name: git-repo-creds
+    url: https://git.example.org/me
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: vault-backend
+    username:
+      key: homelab/argocd-git
+      property: username
+    token:
+      key: homelab/argocd-git
+      property: token

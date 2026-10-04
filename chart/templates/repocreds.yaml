@@ -1,0 +1,42 @@
+{{- range .Values.repoCreds }}
+{{- $path := printf "repoCreds[%s]" (.name | default "?") }}
+{{- $store := .secretStoreRef | default dict }}
+---
+# Credential template: ArgoCD uses it for every repository under the URL
+# prefix that has no credentials of its own. The token never transits Git: the
+# External Secrets Operator copies it from the secret store.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ required "homelab-argocd: repoCreds[].name is required" .name }}
+  namespace: {{ $.Values.argocdNamespace }}
+  annotations:
+    # Losing this object cuts ArgoCD off from the repositories it covers:
+    # never pruned nor deleted.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  refreshInterval: {{ .refreshInterval | default "1h" }}
+  secretStoreRef:
+    kind: {{ $store.kind | default "ClusterSecretStore" }}
+    name: {{ required (printf "homelab-argocd: %s.secretStoreRef.name is required" $path) $store.name }}
+  target:
+    name: {{ .name }}
+    template:
+      metadata:
+        labels:
+          argocd.argoproj.io/secret-type: repo-creds
+      data:
+        type: {{ .type | default "git" }}
+        url: {{ required (printf "homelab-argocd: %s.url is required" $path) .url }}
+        username: {{`"{{ .username }}"`}}
+        password: {{`"{{ .token }}"`}}
+  data:
+    - secretKey: username
+      remoteRef:
+        key: {{ required (printf "homelab-argocd: %s.username.key is required" $path) (dig "username" "key" "" .) }}
+        property: {{ required (printf "homelab-argocd: %s.username.property is required" $path) (dig "username" "property" "" .) }}
+    - secretKey: token
+      remoteRef:
+        key: {{ required (printf "homelab-argocd: %s.token.key is required" $path) (dig "token" "key" "" .) }}
+        property: {{ required (printf "homelab-argocd: %s.token.property is required" $path) (dig "token" "property" "" .) }}
+{{- end }}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "homelab-argocd values",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", "maxLength": 63 },
+    "repoList": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "groupKind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group", "kind"],
+      "properties": {
+        "group": { "type": "string" },
+        "kind": { "type": "string", "minLength": 1 }
+      }
+    },
+    "storeKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "property"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "property": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "properties": {
+    "global": { "type": "object" },
+    "argocdNamespace": { "$ref": "#/$defs/name" },
+    "destinationServer": { "type": "string", "pattern": "^https://" },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repoURL": { "type": "string" },
+        "revision": { "type": "string", "minLength": 1 },
+        "appsDir": { "type": "string", "pattern": "^[^/*]+(/[^/*]+)*$" }
+      }
+    },
+    "bootstrapProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "type": "string" },
+        "sourceRepos": { "$ref": "#/$defs/repoList" }
+      }
+    },
+    "appsProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "description": { "type": "string" },
+        "sourceRepos": { "$ref": "#/$defs/repoList" },
+        "deniedNamespaces": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9*?]([-a-z0-9*?]*)$" },
+          "uniqueItems": true
+        },
+        "clusterResourceWhitelist": { "type": "array", "items": { "$ref": "#/$defs/groupKind" } },
+        "namespaceResourceBlacklist": { "type": "array", "items": { "$ref": "#/$defs/groupKind" } }
+      }
+    },
+    "applicationSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "preserveResourcesOnDeletion": { "type": "boolean" }
+      }
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["secretName", "name", "type", "url"],
+        "properties": {
+          "secretName": { "$ref": "#/$defs/name" },
+          "name": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["git", "helm"] },
+          "url": { "type": "string", "minLength": 1 },
+          "enableOCI": { "type": "boolean" }
+        }
+      }
+    },
+    "repoCreds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url", "secretStoreRef", "username", "token"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" },
+          "url": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["git", "helm"] },
+          "refreshInterval": { "type": "string", "pattern": "^[0-9]+(s|m|h)$" },
+          "secretStoreRef": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "kind": { "enum": ["SecretStore", "ClusterSecretStore"] },
+              "name": { "type": "string", "minLength": 1 }
+            }
+          },
+          "username": { "$ref": "#/$defs/storeKey" },
+          "token": { "$ref": "#/$defs/storeKey" }
+        }
+      }
+    }
+  }
+}

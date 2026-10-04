@@ -1,0 +1,19 @@
+apiVersion: v2
+name: homelab-argocd
+description: >-
+  ArgoCD app-of-apps for a homelab: a bootstrap and an applications
+  AppProject, an ApplicationSet generating one Application per app.yaml in
+  an overlay repository, repository declarations and ESO-backed repository
+  credentials.
+type: application
+version: 0.1.0
+home: https://github.com/Damien-Petit-Thomas/homelab-argocd
+sources:
+  - https://github.com/Damien-Petit-Thomas/homelab-argocd
+keywords:
+  - argocd
+  - gitops
+  - applicationset
+maintainers:
+  - name: Damien Petit-Thomas
+    url: https://github.com/Damien-Petit-Thomas

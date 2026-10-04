@@ -1,0 +1,25 @@
+{{- $p := .Values.appsProject }}
+{{- include "homelab-argocd.requireList" (dict "value" $p.sourceRepos "path" "appsProject.sourceRepos") }}
+# Application tier. Enforced here rather than by convention: the kinds and
+# namespaces below are refused at sync time, whatever an app.yaml asks for.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $p.name }}
+  namespace: {{ .Values.argocdNamespace }}
+  annotations:
+    # Deleting a project orphans its Applications: never pruned nor deleted.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  description: {{ $p.description | quote }}
+  sourceRepos:
+    {{- toYaml $p.sourceRepos | nindent 4 }}
+  destinations:
+    - { server: {{ .Values.destinationServer }}, namespace: "*" }
+    {{- range $p.deniedNamespaces }}
+    - { server: {{ $.Values.destinationServer }}, namespace: {{ printf "!%s" . | quote }} }
+    {{- end }}
+  clusterResourceWhitelist:
+    {{- toYaml $p.clusterResourceWhitelist | nindent 4 }}
+  namespaceResourceBlacklist:
+    {{- toYaml $p.namespaceResourceBlacklist | nindent 4 }}
