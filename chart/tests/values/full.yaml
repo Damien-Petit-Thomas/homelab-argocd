@@ -1,0 +1,22 @@
+overlay:
+  repoURL: https://git.example.org/me/homelab-argocd-overlay.git
+bootstrapProject:
+  sourceRepos:
+    - https://git.example.org/me/homelab-argocd-overlay.git
+appsProject:
+  sourceRepos:
+    - https://git.example.org/me/homelab-argocd-overlay.git
+    - ghcr.io/bjw-s-labs/helm
+  deniedNamespaces: [kube-*, argocd, gitea, vault, step-ca, cert-manager, cnpg-system, external-secrets, democratic-csi]
+repositories:
+  - secretName: repo-bjw-s-helm
+    name: bjw-s-helm
+    type: helm
+    url: ghcr.io/bjw-s-labs/helm
+    enableOCI: true
+repoCreds:
+  - name: gitea-repo-creds
+    url: https://git.example.org/me
+    secretStoreRef: {kind: ClusterSecretStore, name: vault-backend}
+    username: {key: homelab/argocd-git, property: username}
+    token: {key: homelab/argocd-git, property: token}

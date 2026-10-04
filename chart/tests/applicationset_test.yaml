@@ -1,0 +1,92 @@
+suite: ApplicationSet
+templates:
+  - templates/applicationset.yaml
+values:
+  - values/minimal.yaml
+tests:
+  - it: passes the ApplicationSet's own Go templates through untouched
+    asserts:
+      - equal:
+          path: spec.template.metadata.name
+          value: '{{ .path.basename }}'
+      - equal:
+          path: spec.template.spec.destination.namespace
+          value: '{{ .namespace }}'
+      - equal:
+          path: spec.template.spec.sources[0]
+          value:
+            repoURL: '{{ .chart.repoURL }}'
+            chart: '{{ .chart.name }}'
+            targetRevision: '{{ .chart.version }}'
+            helm:
+              releaseName: '{{ .path.basename }}'
+              valueFiles:
+                - '$overlay/{{ .path.path }}/values.yaml'
+      - equal:
+          path: spec.template.spec.sources[2].path
+          value: '{{ .path.path }}/addons'
+      - equal:
+          path: spec.templatePatch
+          value: |
+            {{- if .autoSync }}
+            spec:
+              syncPolicy:
+                automated:
+                  prune: true
+                  selfHeal: true
+            {{- end }}
+
+  - it: errors on a field missing from an app.yaml
+    asserts:
+      - equal:
+          path: spec.goTemplateOptions
+          value: ["missingkey=error"]
+
+  - it: never deletes resources when an application directory is removed
+    asserts:
+      - equal:
+          path: spec.syncPolicy.preserveResourcesOnDeletion
+          value: true
+
+  - it: reads app.yaml files and values from the overlay
+    asserts:
+      - equal:
+          path: spec.generators[0].git
+          value:
+            repoURL: https://git.example.org/me/overlay.git
+            revision: main
+            files:
+              - path: apps/*/app.yaml
+      - equal:
+          path: spec.template.spec.sources[1]
+          value:
+            repoURL: https://git.example.org/me/overlay.git
+            targetRevision: main
+            ref: overlay
+
+  - it: follows a custom apps directory and revision
+    set:
+      overlay.appsDir: clusters/home/apps
+      overlay.revision: v2
+    asserts:
+      - equal:
+          path: spec.generators[0].git.files[0].path
+          value: clusters/home/apps/*/app.yaml
+      - equal:
+          path: spec.template.spec.sources[2].targetRevision
+          value: v2
+
+  - it: puts generated Applications in the applications project
+    set:
+      appsProject.name: workloads
+    asserts:
+      - equal:
+          path: spec.template.spec.project
+          value: workloads
+
+  - it: requires the overlay URL
+    set:
+      overlay.repoURL: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: 'overlay.repoURL is required'
