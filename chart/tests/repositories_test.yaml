@@ -1,0 +1,85 @@
+suite: repositories and credentials
+templates:
+  - templates/repositories.yaml
+  - templates/repocreds.yaml
+values:
+  - values/minimal.yaml
+tests:
+  - it: renders nothing without entries
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: declares a public OCI chart repository without credentials
+    template: templates/repositories.yaml
+    values:
+      - values/full.yaml
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            argocd.argoproj.io/secret-type: repository
+      - equal:
+          path: stringData
+          value:
+            name: bjw-s-helm
+            type: helm
+            url: ghcr.io/bjw-s-labs/helm
+            enableOCI: "true"
+
+  - it: renders repository credentials as an ExternalSecret, never as a Secret
+    template: templates/repocreds.yaml
+    values:
+      - values/full.yaml
+    asserts:
+      - isKind:
+          of: ExternalSecret
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+      - equal:
+          path: spec.target.template.metadata.labels
+          value:
+            argocd.argoproj.io/secret-type: repo-creds
+
+  - it: passes the ESO template expressions through untouched
+    template: templates/repocreds.yaml
+    values:
+      - values/full.yaml
+    asserts:
+      - equal:
+          path: spec.target.template.data
+          value:
+            type: git
+            url: https://git.example.org/me
+            username: "{{ .username }}"
+            password: "{{ .token }}"
+
+  - it: reads both fields from the secret store
+    template: templates/repocreds.yaml
+    values:
+      - values/full.yaml
+    asserts:
+      - equal:
+          path: spec.data
+          value:
+            - secretKey: username
+              remoteRef: {key: homelab/argocd-git, property: username}
+            - secretKey: token
+              remoteRef: {key: homelab/argocd-git, property: token}
+      - equal:
+          path: spec.secretStoreRef
+          value: {kind: ClusterSecretStore, name: vault-backend}
+
+  - it: rejects an empty token location (schema)
+    template: templates/repocreds.yaml
+    set:
+      repoCreds:
+        - name: creds
+          url: https://git.example.org/me
+          secretStoreRef: {name: vault-backend}
+          username: {key: k, property: u}
+          token: {key: k, property: ""}
+    asserts:
+      - failedTemplate:
+          errorPattern: "'/repoCreds/0/token/property'"

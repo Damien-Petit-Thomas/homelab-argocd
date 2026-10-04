@@ -1,0 +1,80 @@
+suite: AppProjects
+templates:
+  - templates/appproject-bootstrap.yaml
+  - templates/appproject-apps.yaml
+values:
+  - values/minimal.yaml
+tests:
+  - it: protects both projects from pruning and deletion
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: confines the bootstrap project to ArgoCD objects in the ArgoCD namespace
+    template: templates/appproject-bootstrap.yaml
+    asserts:
+      - equal:
+          path: spec.destinations
+          value:
+            - server: https://kubernetes.default.svc
+              namespace: argocd
+      - equal:
+          path: spec.clusterResourceWhitelist
+          value: []
+      - equal:
+          path: spec.namespaceResourceWhitelist
+          value:
+            - { group: argoproj.io, kind: Application }
+            - { group: argoproj.io, kind: ApplicationSet }
+            - { group: argoproj.io, kind: AppProject }
+
+  - it: lets the bootstrap project manage Secrets and ExternalSecrets only when used
+    template: templates/appproject-bootstrap.yaml
+    values:
+      - values/full.yaml
+    asserts:
+      - contains:
+          path: spec.namespaceResourceWhitelist
+          content: { group: external-secrets.io, kind: ExternalSecret }
+      - contains:
+          path: spec.namespaceResourceWhitelist
+          content: { group: "", kind: Secret }
+
+  - it: allows every namespace except the denied ones, in order
+    template: templates/appproject-apps.yaml
+    asserts:
+      - equal:
+          path: spec.destinations
+          value:
+            - { server: https://kubernetes.default.svc, namespace: "*" }
+            - { server: https://kubernetes.default.svc, namespace: "!kube-*" }
+            - { server: https://kubernetes.default.svc, namespace: "!argocd" }
+
+  - it: refuses raw Secrets and every cluster-scoped kind but Namespace
+    template: templates/appproject-apps.yaml
+    asserts:
+      - equal:
+          path: spec.namespaceResourceBlacklist
+          value:
+            - { group: "", kind: Secret }
+      - equal:
+          path: spec.clusterResourceWhitelist
+          value:
+            - { group: "", kind: Namespace }
+
+  - it: requires the bootstrap project's source repositories
+    template: templates/appproject-bootstrap.yaml
+    set:
+      bootstrapProject.sourceRepos: []
+    asserts:
+      - failedTemplate:
+          errorPattern: 'bootstrapProject.sourceRepos must list at least one entry'
+
+  - it: requires the applications project's source repositories
+    template: templates/appproject-apps.yaml
+    set:
+      appsProject.sourceRepos: []
+    asserts:
+      - failedTemplate:
+          errorPattern: 'appsProject.sourceRepos must list at least one entry'

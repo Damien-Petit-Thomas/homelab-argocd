@@ -1,0 +1,42 @@
+# Single source of truth for tool versions, shared by laptops and CI
+# (jdx/mise-action reads this file and mise.lock). Every tool comes from the
+# aqua registry, which verifies release checksums, and signatures where the
+# upstream publishes them. mise.lock pins the exact artifacts per platform.
+
+[settings]
+lockfile = true
+# Supply-chain cooldown, same policy as Dependabot: ignore releases younger
+# than 7 days when resolving fuzzy versions.
+install_before = "7d"
+
+[tools]
+# Same minor as the Helm embedded in the ArgoCD repo-server (v4.2.1), the
+# real consumer of these charts. Not 4.2.1 itself: its waits on deletions
+# (hooks, uninstall) last the whole --timeout (helm/helm#32214, fixed in
+# 4.2.2); ArgoCD only renders templates, so it is not affected.
+# Helm 3 is not supported (ADR 0002).
+helm = "4.2.4"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+zizmor = "1.30.1"
+pre-commit = "4.6.2"
+# mikefarah yq, pinned so scripts behave the same on laptops (where the
+# Python yq may shadow it) and on runners.
+yq = "4.53.6"
+# Standalone binary of the helm-unittest plugin (`untt`). 1.1.2 renders with
+# the Helm 3 engine; 1.2.x (Helm 4 engine) is held back by the 7-day cooldown.
+# Helm 4 itself still runs lint, template and install tests.
+"github:helm-unittest/helm-unittest" = { version = "1.1.2", bin = "untt" }
+jq = "1.8.2"
+
+[tasks.lint]
+description = "Run every pre-commit hook on the whole tree"
+run = "pre-commit run --all-files --show-diff-on-failure"
+
+[tasks."chart:lint"]
+description = "helm lint --strict on the chart, with the minimal and full test values"
+run = "helm lint --strict chart -f chart/tests/values/minimal.yaml && helm lint --strict chart -f chart/tests/values/full.yaml"
+
+[tasks."chart:test"]
+description = "helm-unittest on the chart"
+run = "untt --strict chart"

@@ -1,0 +1,6 @@
+namespace: finance
+chart:
+  repoURL: ghcr.io/bjw-s-labs/helm
+  name: app-template
+  version: 5.2.1
+autoSync: false

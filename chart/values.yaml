@@ -1,0 +1,64 @@
+# Generic defaults. A real deployment sets at least overlay.repoURL and both
+# projects' sourceRepos: see values.EXAMPLE.yaml at the repository root.
+
+# -- Namespace where ArgoCD runs and where every object of this chart lives.
+argocdNamespace: argocd
+# -- Cluster the generated Applications deploy to.
+destinationServer: https://kubernetes.default.svc
+
+# Repository holding apps/<name>/{app.yaml,values.yaml,addons/}.
+overlay:
+  # -- Overlay repository URL (required).
+  repoURL: ""
+  # -- Branch, tag or commit the ApplicationSet and its Applications follow.
+  revision: main
+  # -- Directory holding one sub-directory per application.
+  appsDir: apps
+
+# Project of the root Application: ArgoCD configuration objects only.
+bootstrapProject:
+  # -- AppProject name.
+  name: bootstrap
+  # -- AppProject description.
+  description: ArgoCD configuration managed from bootstrap/ (projects, ApplicationSets, repository access).
+  # -- Repositories the root Application reads: the overlay and this chart's
+  # repository (required).
+  sourceRepos: []
+
+# Project of the generated Applications.
+appsProject:
+  # -- AppProject name.
+  name: apps
+  # -- AppProject description.
+  description: Application tier, one Application per apps/<name>/ directory.
+  # -- Repositories applications may come from: the overlay and the chart
+  # repositories used in app.yaml files (required).
+  sourceRepos: []
+  # -- Namespaces applications may never deploy to (glob patterns). Everything
+  # else is allowed.
+  deniedNamespaces:
+    - kube-*
+    - argocd
+  # -- The only cluster-scoped kinds applications may create.
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  # -- Namespaced kinds applications may never create. Secrets come from an
+  # operator such as External Secrets, never from Git.
+  namespaceResourceBlacklist:
+    - { group: "", kind: Secret }
+
+applicationSet:
+  # -- ApplicationSet name.
+  name: apps
+  # -- Delete nothing when an application directory is removed.
+  preserveResourcesOnDeletion: true
+
+# -- Repository declarations without credentials (public chart repositories).
+# Each item: secretName, name, type (git or helm), url, enableOCI.
+repositories: []
+
+# -- Repository credential templates, rendered as ExternalSecrets (External
+# Secrets Operator, API external-secrets.io/v1). Each item: name, url (prefix
+# the credentials apply to), type, secretStoreRef {kind, name},
+# refreshInterval, username {key, property}, token {key, property}.
+repoCreds: []

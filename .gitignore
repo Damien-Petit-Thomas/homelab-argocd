@@ -1,0 +1,5 @@
+# Packaged chart
+*.tgz
+
+# helm-unittest output
+**/__snapshot__/*.yaml.tmp

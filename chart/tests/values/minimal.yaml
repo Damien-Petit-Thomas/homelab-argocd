@@ -1,0 +1,6 @@
+overlay:
+  repoURL: https://git.example.org/me/overlay.git
+bootstrapProject:
+  sourceRepos: [https://git.example.org/me/overlay.git]
+appsProject:
+  sourceRepos: [https://git.example.org/me/overlay.git]
