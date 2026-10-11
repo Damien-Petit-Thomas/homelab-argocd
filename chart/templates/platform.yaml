@@ -1,0 +1,39 @@
+{{- if .Values.platform.enabled }}
+{{- $p := .Values.platform.project }}
+{{- include "homelab-argocd.requireList" (dict "value" $p.sourceRepos "path" "platform.project.sourceRepos") }}
+{{- include "homelab-argocd.requireList" (dict "value" $p.destinationNamespaces "path" "platform.project.destinationNamespaces") }}
+{{- range $p.destinationNamespaces }}
+{{- if or (contains "*" .) (hasPrefix "!" .) }}
+{{- fail (printf "homelab-argocd: platform.project.destinationNamespaces lists namespaces, not patterns: %q" .) }}
+{{- end }}
+{{- end }}
+# Platform tier: cluster add-ons and policies. Unlike the applications
+# project, destinations are an explicit list and cluster-scoped kinds are
+# granted one by one.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $p.name }}
+  namespace: {{ .Values.argocdNamespace }}
+  annotations:
+    # Deleting a project orphans its Applications: never pruned nor deleted.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  description: {{ $p.description | quote }}
+  sourceRepos:
+    {{- toYaml $p.sourceRepos | nindent 4 }}
+  destinations:
+    {{- range $p.destinationNamespaces }}
+    - { server: {{ $.Values.destinationServer }}, namespace: {{ . | quote }} }
+    {{- end }}
+  clusterResourceWhitelist:
+    {{- toYaml $p.clusterResourceWhitelist | nindent 4 }}
+  namespaceResourceBlacklist:
+    {{- toYaml $p.namespaceResourceBlacklist | nindent 4 }}
+---
+{{ include "homelab-argocd.applicationSet" (dict
+      "context" $
+      "name" .Values.platform.applicationSet.name
+      "project" $p.name
+      "appsDir" .Values.platform.applicationSet.appsDir) }}
+{{- end }}

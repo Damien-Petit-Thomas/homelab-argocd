@@ -62,3 +62,31 @@ repositories: []
 # the credentials apply to), type, secretStoreRef {kind, name},
 # refreshInterval, username {key, property}, token {key, property}.
 repoCreds: []
+
+# Platform tier: cluster add-ons and policies, one Application per
+# <appsDir>/<name>/app.yaml, in their own project. Disabled by default.
+platform:
+  # -- Render the platform AppProject and ApplicationSet.
+  enabled: false
+  project:
+    # -- AppProject name.
+    name: platform
+    # -- AppProject description.
+    description: Platform tier, one Application per platform/<name>/ directory.
+    # -- Repositories platform applications may come from (required when
+    # enabled).
+    sourceRepos: []
+    # -- Namespaces platform applications may deploy to: an explicit list,
+    # never "*" (required when enabled).
+    destinationNamespaces: []
+    # -- Cluster-scoped kinds platform applications may create (for instance
+    # ValidatingAdmissionPolicy). Empty: none.
+    clusterResourceWhitelist: []
+    # -- Namespaced kinds platform applications may never create.
+    namespaceResourceBlacklist:
+      - { group: "", kind: Secret }
+  applicationSet:
+    # -- ApplicationSet name.
+    name: platform
+    # -- Overlay directory holding one sub-directory per platform application.
+    appsDir: platform

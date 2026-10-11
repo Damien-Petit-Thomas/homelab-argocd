@@ -20,6 +20,7 @@ overlay repository                            this chart (rendered by root)
 | ApplicationSet | `missingkey=error` (a field missing from an `app.yaml` fails); `preserveResourcesOnDeletion` (removing a directory deletes nothing); automated sync opt-in per application |
 | AppProject `apps` | no raw `Secret` (secrets come from External Secrets); no destination in denied namespaces; `Namespace` as the only cluster-scoped kind |
 | AppProject `bootstrap` | ArgoCD objects in the ArgoCD namespace only |
+| AppProject `platform` (optional) | destinations listed one by one, never `*`; cluster-scoped kinds granted one by one; ApplicationSet `platform` reads `platform/*/app.yaml` |
 | AppProjects, credentials | `Prune=false,Delete=false`: never deleted by a sync |
 | Credentials | ExternalSecrets only: no token in Git |
 

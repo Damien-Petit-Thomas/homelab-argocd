@@ -1,0 +1,75 @@
+suite: platform tier
+templates:
+  - templates/platform.yaml
+values:
+  - values/minimal.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a project and an ApplicationSet when enabled
+    values:
+      - values/platform.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+
+  - it: lists destination namespaces explicitly
+    values:
+      - values/platform.yaml
+    documentSelector:
+      path: kind
+      value: AppProject
+    asserts:
+      - equal:
+          path: spec.destinations
+          value:
+            - { server: https://kubernetes.default.svc, namespace: policies }
+      - equal:
+          path: spec.clusterResourceWhitelist
+          value:
+            - { group: admissionregistration.k8s.io, kind: ValidatingAdmissionPolicy }
+            - { group: admissionregistration.k8s.io, kind: ValidatingAdmissionPolicyBinding }
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: generates platform Applications in the platform project from their own directory
+    values:
+      - values/platform.yaml
+    documentSelector:
+      path: kind
+      value: ApplicationSet
+    asserts:
+      - equal:
+          path: metadata.name
+          value: platform
+      - equal:
+          path: spec.template.spec.project
+          value: platform
+      - equal:
+          path: spec.generators[0].git.files[0].path
+          value: platform/*/app.yaml
+      - equal:
+          path: spec.goTemplateOptions
+          value: ["missingkey=error"]
+
+  - it: requires the destination namespaces
+    values:
+      - values/platform.yaml
+    set:
+      platform.project.destinationNamespaces: []
+    asserts:
+      - failedTemplate:
+          errorPattern: 'platform.project.destinationNamespaces must list at least one entry'
+
+  - it: refuses namespace patterns (schema)
+    values:
+      - values/platform.yaml
+    set:
+      platform.project.destinationNamespaces: ["*"]
+    asserts:
+      - failedTemplate:
+          errorPattern: "'/platform/project/destinationNamespaces/0'"
