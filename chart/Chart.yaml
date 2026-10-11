@@ -6,7 +6,7 @@ description: >-
   an overlay repository, repository declarations and ESO-backed repository
   credentials.
 type: application
-version: 0.1.0
+version: 0.2.0
 home: https://github.com/Damien-Petit-Thomas/homelab-argocd
 sources:
   - https://github.com/Damien-Petit-Thomas/homelab-argocd
