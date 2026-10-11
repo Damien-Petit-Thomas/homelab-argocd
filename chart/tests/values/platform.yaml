@@ -1,0 +1,8 @@
+platform:
+  enabled: true
+  project:
+    sourceRepos: [ghcr.io/damien-petit-thomas/charts]
+    destinationNamespaces: [policies]
+    clusterResourceWhitelist:
+      - { group: admissionregistration.k8s.io, kind: ValidatingAdmissionPolicy }
+      - { group: admissionregistration.k8s.io, kind: ValidatingAdmissionPolicyBinding }
