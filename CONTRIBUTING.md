@@ -23,7 +23,15 @@ breaking change ([ADR 0001](docs/adr/0001-same-object-names.md)).
 ## Pull requests
 
 `main` accepts pull requests only; they merge when `ci-ok` and `zizmor`
-pass. A new CI job joins the `needs` of `ci-ok`, never the ruleset.
+pass, by rebase only: each reviewed commit lands as written, and no merge
+commit repeats a pull request title. A new CI job joins the `needs` of
+`ci-ok`, never the ruleset.
+
+## Repository settings
+
+The rulesets are versioned in `.github/rulesets/`. After changing one in
+GitHub, export it with `scripts/export-ruleset.sh <name>` and commit the
+result.
 
 ## Tests
 
